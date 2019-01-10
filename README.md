@@ -2,7 +2,7 @@
 [链接](https://mying666.github.io/myEcTooltip/index)
 
 ## 效果图
-![image](./images/1.png)
+![image](./images/1.png)![image](./images/border.gif)
 ![image](./images/GIF.gif)
 
 ## 配置项
