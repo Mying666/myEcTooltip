@@ -16,7 +16,7 @@ class myTooltipC {
         this.config = {
             priority: 'top',        // 默认在点上方OR下方（top/bottom）
             partition: 1.4,         // 左右分割比例
-            lineColor: '#fff',      // 引导线颜色
+            lineColor: 'rgba(253, 129, 91, 0.8)',      // 引导线颜色
             offset: [5, 5],
             L1: {
                 time: 0.3,          // L1动画时长(单位s)
@@ -34,7 +34,13 @@ class myTooltipC {
                 width: 120,
                 height: 60,
                 lineHeight: 24,
-                backgroundColor: 'rgba(50, 50, 50, 0.8)'
+                backgroundColor: 'rgba(50, 50, 50, 0.5)',
+                borderColor: 'rgba(253, 129, 91, 1)',
+                borderWidth: 1,
+                angle: {
+                    width: 2,
+                    long: 15
+                }
             }
         }
         _.merge(this.config, config, {
@@ -110,8 +116,10 @@ class createTooltip {
         this.timeline = new TimelineMax({ repeat: 0 })
         this.g = new createjs.Graphics()
         this.lineShape = new createjs.Shape(this.g)
+        this.textContainer = new createjs.Container();
         this.textShape = new createjs.Shape()
-        this.stage.addChild(this.lineShape, this.textShape)
+        this.textContainer.addChild(this.textShape)
+        this.stage.addChild(this.lineShape, this.textContainer)
         this.init()
         this.begin()
         this.update()
@@ -214,24 +222,81 @@ class createTooltip {
                     x = L2End[0]
                 }
                 me.g.c().s(c.lineColor).mt(...me.start).lt(...me.L1End).lt(...L2End)
-                me.text = new createjs.Text(me.text, c.text.font, c.text.color)
-                me.text.alpha = 0
-                me.text.lineHeight = c.text.lineHeight
-                me.text.x = x + c.text.padding[0]
-                me.text.y = L2End[1] - c.text.height / 2 + c.text.padding[1]
-                me.stage.addChild(me.text)
-                me.textShape.graphics.c().f(c.text.backgroundColor).rr(x, L2End[1] - c.text.height / 2, c.text.width, c.text.height, 5)
+                // 容器定位
+                me.textContainer.x = x
+                me.textContainer.y = L2End[1] - c.text.height / 2
+
+                me.textBorder(c.text.width, c.text.height - 2)
+
+                me.textC = new createjs.Text(me.text, c.text.font, c.text.color)
+                me.textC.alpha = 0
+                me.textC.lineHeight = c.text.lineHeight
+                me.textC.x = c.text.padding[0]
+                me.textC.y = c.text.padding[1]
+                me.textContainer.addChild(me.textC)
+                me.textShape.graphics.c().f(c.text.backgroundColor)
+                    .r(c.text.angle.width, c.text.angle.width, c.text.width - c.text.angle.width * 2, c.text.height - c.text.angle.width * 2)
                 me.textShape.alpha = 0
                 me.update()
             },
             onUpdate () {
-                if (typeof me.text === 'string') return
-                me.text.alpha = scale.s
-                me.textShape.alpha = scale.s
+                if (!me.textC) return
+                me.textC.alpha = scale.s
+                me.textShape.alpha = Math.sin(scale.s * Math.PI * 2.5)
                 me.update()
             },
             onComplete () {
                 me.over = true
+            }
+        })
+        this.timeline.add(tl, this.totalTime)
+    }
+    textBorder (w, h) {
+        let me = this
+        let borderWidth = 1
+        let borderAngle = new createjs.Shape()
+        let border = new createjs.Shape()
+        let color = this.config.text.borderColor
+        this.textContainer.addChild(borderAngle, border)
+        let angle = this.config.text.angle
+        // 偏移量
+        let skew = angle.width / 2
+        // 边线
+        // border.graphics.s(color).ss(1).mt(skew, skew).lt(skew, h - skew).lt(w - skew, h - skew).lt(w - skew, skew).cp()
+        let tl = new TimelineMax()
+        let scale = { s: 0 }
+        // 四角
+        borderAngle.graphics.c().s(color).ss(angle.width)
+            .mt(skew, angle.long).lt(skew, skew).lt(angle.long, skew)
+            .mt(skew, h - angle.long).lt(skew, h - skew).lt(angle.long, h - skew)
+            .mt(w - angle.long, 0).lt(w - skew, skew).lt(w - skew, angle.long)
+            .mt(w - angle.long, h).lt(w - skew, h - skew).lt(w - skew, h - angle.long)
+        tl.to(scale, this.config.text.time / 4, {
+            s: 1,
+            onUpdate () {
+                let s = scale.s
+                border.graphics.c().s(color).ss(borderWidth).mt(skew, skew).lt((w - skew) * s, skew)
+            }
+        }).to(scale, this.config.text.time / 4, {
+            s: 0,
+            onUpdate () {
+                let s = 1 - scale.s
+                border.graphics.c().s(color).ss(borderWidth).mt(skew, skew)
+                    .lt(w - skew, skew).lt(w - skew, (h - skew) * s)
+            }
+        }).to(scale, this.config.text.time / 4, {
+            s: 1,
+            onUpdate () {
+                let s = scale.s
+                border.graphics.c().s(color).ss(borderWidth).mt(skew, skew)
+                    .lt(w - skew, skew).lt(w - skew, h - skew).lt(w - skew - (w - 2 * skew) * s, h - skew)
+            }
+        }).to(scale, this.config.text.time / 4, {
+            s: 0,
+            onUpdate () {
+                let s = 1 - scale.s
+                border.graphics.c().s(color).ss(borderWidth).mt(skew, skew)
+                    .lt(w - skew, skew).lt(w - skew, h - skew).lt(skew, h - skew).lt(skew, h - skew - (h - 2 * skew) * s)
             }
         })
         this.timeline.add(tl, this.totalTime)
